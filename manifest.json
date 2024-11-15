@@ -1,0 +1,10 @@
+{
+    "manifest_version": 3,
+    "name": "Akash Test",
+    "version": "1.0.0",
+    "description": "My first extension",
+    "action": {
+    "default_popup": "hello.html",
+    "default_icon": "bookmark.png"
+  }
+  }
