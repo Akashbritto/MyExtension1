@@ -18,19 +18,32 @@ COLUMNS_TO_INCLUDE = []  # Fill this with the column names you want to keep
 
 def clean_column_name(name):
     """Clean a single column name to be BigQuery-compatible"""
+    # Preserve initial underscore if present
+    starts_with_underscore = name.startswith('#')
+    
     # Convert to lowercase
     new_name = name.lower()
-    # Replace spaces and special characters with underscores
+    
+    # If the column starts with '#', replace it with nothing to preserve 'change' instead of '_change'
+    if starts_with_underscore:
+        new_name = new_name.replace('#', '', 1)
+    
+    # Replace other special characters with underscores
     new_name = re.sub(r'[^\w\s]', '_', new_name)
+    
     # Replace multiple underscores with a single one
     new_name = re.sub(r'_+', '_', new_name)
+    
     # Replace spaces with underscores
     new_name = new_name.replace(' ', '_')
+    
     # Ensure names start with a letter or underscore
     if not re.match(r'^[a-zA-Z_]', new_name):
         new_name = f"col_{new_name}"
+    
     # Remove trailing underscores
     new_name = new_name.rstrip('_')
+    
     return new_name
 
 def is_potential_date(value):
@@ -160,6 +173,9 @@ def clean_csv_for_bigquery():
             # Print info about selected columns
             print(f"Total columns in file: {len(all_headers)}")
             print(f"Columns selected for output: {len(header)}")
+            print("Original headers and cleaned headers:")
+            for i, (orig, cleaned) in enumerate(zip(header, clean_header)):
+                print(f"  {i+1}. '{orig}' -> '{cleaned}'")
             
             # Detect column types from sample
             column_conversions = detect_column_types(reader, header)
