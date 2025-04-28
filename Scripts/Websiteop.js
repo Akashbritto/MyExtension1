@@ -9,6 +9,11 @@ OUTPUT_FILE = "output_bq_ready.csv"  # Path to save the cleaned CSV file
 DELIMITER = ','  # CSV delimiter character
 QUOTECHAR = '"'  # CSV quote character
 ENCODING = 'utf-8'  # File encoding
+
+# List of column names from the original CSV to include in the output
+# Leave empty [] to include all columns
+# Example: COLUMNS_TO_INCLUDE = ["Customer ID", "First Name", "Last Name", "Purchase Date"]
+COLUMNS_TO_INCLUDE = []  # Fill this with the column names you want to keep
 # ==================================================
 
 def clean_column_name(name):
@@ -132,8 +137,29 @@ def clean_csv_for_bigquery():
     try:
         with open(INPUT_FILE, 'r', encoding=ENCODING, newline='') as f:
             reader = csv.reader(f, delimiter=DELIMITER, quotechar=QUOTECHAR)
-            header = next(reader)
+            all_headers = next(reader)
+            
+            # Filter columns if COLUMNS_TO_INCLUDE is specified
+            if COLUMNS_TO_INCLUDE:
+                # Check if all specified columns exist in the file
+                missing_columns = [col for col in COLUMNS_TO_INCLUDE if col not in all_headers]
+                if missing_columns:
+                    print(f"Warning: The following specified columns were not found in the CSV: {missing_columns}")
+                
+                # Get indices of columns to include
+                column_indices = [i for i, col in enumerate(all_headers) if col in COLUMNS_TO_INCLUDE]
+                header = [all_headers[i] for i in column_indices]
+            else:
+                # Include all columns
+                header = all_headers
+                column_indices = list(range(len(header)))
+            
+            # Clean column names
             clean_header = [clean_column_name(col) for col in header]
+            
+            # Print info about selected columns
+            print(f"Total columns in file: {len(all_headers)}")
+            print(f"Columns selected for output: {len(header)}")
             
             # Detect column types from sample
             column_conversions = detect_column_types(reader, header)
@@ -142,7 +168,19 @@ def clean_csv_for_bigquery():
         print(f"Encoding {ENCODING} failed. Trying with 'latin1' encoding...")
         with open(INPUT_FILE, 'r', encoding='latin1', newline='') as f:
             reader = csv.reader(f, delimiter=DELIMITER, quotechar=QUOTECHAR)
-            header = next(reader)
+            all_headers = next(reader)
+            
+            # Filter columns if COLUMNS_TO_INCLUDE is specified
+            if COLUMNS_TO_INCLUDE:
+                # Get indices of columns to include
+                column_indices = [i for i, col in enumerate(all_headers) if col in COLUMNS_TO_INCLUDE]
+                header = [all_headers[i] for i in column_indices]
+            else:
+                # Include all columns
+                header = all_headers
+                column_indices = list(range(len(header)))
+            
+            # Clean column names
             clean_header = [clean_column_name(col) for col in header]
             
             # Detect column types from sample
@@ -170,13 +208,16 @@ def clean_csv_for_bigquery():
             for row in reader:
                 rows_read += 1
                 
-                # Ensure row has enough columns
-                while len(row) < len(header):
-                    row.append('')
+                # Skip rows that are too short
+                if len(row) < max(column_indices, default=0) + 1:
+                    continue
+                
+                # Extract and process only the columns we want
+                filtered_row = [row[i] if i < len(row) else '' for i in column_indices]
                 
                 # Clean values
                 clean_row = []
-                for i, value in enumerate(row[:len(header)]):
+                for i, value in enumerate(filtered_row):
                     col_name = header[i]
                     clean_value_str = clean_value(value)
                     
@@ -225,13 +266,16 @@ def clean_csv_for_bigquery():
             for row in reader:
                 rows_read += 1
                 
-                # Ensure row has enough columns
-                while len(row) < len(header):
-                    row.append('')
+                # Skip rows that are too short
+                if len(row) < max(column_indices, default=0) + 1:
+                    continue
+                
+                # Extract and process only the columns we want
+                filtered_row = [row[i] if i < len(row) else '' for i in column_indices]
                 
                 # Clean values
                 clean_row = []
-                for i, value in enumerate(row[:len(header)]):
+                for i, value in enumerate(filtered_row):
                     col_name = header[i]
                     clean_value_str = clean_value(value)
                     
