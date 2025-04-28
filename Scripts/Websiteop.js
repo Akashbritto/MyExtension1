@@ -1,8 +1,15 @@
 import csv
 import re
 import os
-import argparse
 from datetime import datetime
+
+# ======= CONFIGURATION - MODIFY THESE VALUES =======
+INPUT_FILE = "input.csv"  # Path to your input CSV file
+OUTPUT_FILE = "output_bq_ready.csv"  # Path to save the cleaned CSV file
+DELIMITER = ','  # CSV delimiter character
+QUOTECHAR = '"'  # CSV quote character
+ENCODING = 'utf-8'  # File encoding
+# ==================================================
 
 def clean_column_name(name):
     """Clean a single column name to be BigQuery-compatible"""
@@ -117,18 +124,14 @@ def detect_column_types(reader, header, sample_size=100):
             
     return column_conversions
 
-def clean_csv_for_bigquery(input_file, output_file=None, delimiter=',', quotechar='"', encoding='utf-8'):
-    """Clean a CSV file for BigQuery upload"""
-    if output_file is None:
-        filename, ext = os.path.splitext(input_file)
-        output_file = f"{filename}_bq_ready{ext}"
-    
-    print(f"Reading CSV file: {input_file}")
+def clean_csv_for_bigquery():
+    """Clean a CSV file for BigQuery upload using predefined constants"""
+    print(f"Reading CSV file: {INPUT_FILE}")
     
     # First pass: Read headers and detect column types
     try:
-        with open(input_file, 'r', encoding=encoding, newline='') as f:
-            reader = csv.reader(f, delimiter=delimiter, quotechar=quotechar)
+        with open(INPUT_FILE, 'r', encoding=ENCODING, newline='') as f:
+            reader = csv.reader(f, delimiter=DELIMITER, quotechar=QUOTECHAR)
             header = next(reader)
             clean_header = [clean_column_name(col) for col in header]
             
@@ -136,9 +139,9 @@ def clean_csv_for_bigquery(input_file, output_file=None, delimiter=',', quotecha
             column_conversions = detect_column_types(reader, header)
     except UnicodeDecodeError:
         # If encoding fails, try with latin1
-        print(f"Encoding {encoding} failed. Trying with 'latin1' encoding...")
-        with open(input_file, 'r', encoding='latin1', newline='') as f:
-            reader = csv.reader(f, delimiter=delimiter, quotechar=quotechar)
+        print(f"Encoding {ENCODING} failed. Trying with 'latin1' encoding...")
+        with open(INPUT_FILE, 'r', encoding='latin1', newline='') as f:
+            reader = csv.reader(f, delimiter=DELIMITER, quotechar=QUOTECHAR)
             header = next(reader)
             clean_header = [clean_column_name(col) for col in header]
             
@@ -151,10 +154,10 @@ def clean_csv_for_bigquery(input_file, output_file=None, delimiter=',', quotecha
     seen_rows = set()  # For duplicate detection
     
     try:
-        with open(input_file, 'r', encoding=encoding, newline='') as infile, \
-             open(output_file, 'w', encoding='utf-8', newline='') as outfile:
+        with open(INPUT_FILE, 'r', encoding=ENCODING, newline='') as infile, \
+             open(OUTPUT_FILE, 'w', encoding='utf-8', newline='') as outfile:
             
-            reader = csv.reader(infile, delimiter=delimiter, quotechar=quotechar)
+            reader = csv.reader(infile, delimiter=DELIMITER, quotechar=QUOTECHAR)
             writer = csv.writer(outfile, quoting=csv.QUOTE_MINIMAL)
             
             # Write clean header
@@ -206,10 +209,10 @@ def clean_csv_for_bigquery(input_file, output_file=None, delimiter=',', quotecha
                     
     except UnicodeDecodeError:
         print(f"Encoding issues detected. Trying with 'latin1' encoding...")
-        with open(input_file, 'r', encoding='latin1', newline='') as infile, \
-             open(output_file, 'w', encoding='utf-8', newline='') as outfile:
+        with open(INPUT_FILE, 'r', encoding='latin1', newline='') as infile, \
+             open(OUTPUT_FILE, 'w', encoding='utf-8', newline='') as outfile:
             
-            reader = csv.reader(infile, delimiter=delimiter, quotechar=quotechar)
+            reader = csv.reader(infile, delimiter=DELIMITER, quotechar=QUOTECHAR)
             writer = csv.writer(outfile, quoting=csv.QUOTE_MINIMAL)
             
             # Write clean header
@@ -259,22 +262,7 @@ def clean_csv_for_bigquery(input_file, output_file=None, delimiter=',', quotecha
     print(f"Total rows read: {rows_read}")
     print(f"Total rows written: {rows_written}")
     print(f"Duplicates removed: {rows_read - rows_written}")
-    print(f"Cleaned CSV saved to: {output_file}")
+    print(f"Cleaned CSV saved to: {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Clean a CSV file for BigQuery upload')
-    parser.add_argument('input_file', help='Path to the input CSV file')
-    parser.add_argument('--output_file', help='Path to save the cleaned file')
-    parser.add_argument('--delimiter', default=',', help='CSV delimiter character')
-    parser.add_argument('--quotechar', default='"', help='CSV quote character')
-    parser.add_argument('--encoding', default='utf-8', help='File encoding')
-    
-    args = parser.parse_args()
-    
-    clean_csv_for_bigquery(
-        args.input_file, 
-        args.output_file,
-        args.delimiter,
-        args.quotechar,
-        args.encoding
-    )
+    clean_csv_for_bigquery()
